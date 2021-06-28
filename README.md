@@ -1,15 +1,15 @@
 # TFG-CLUTERING-Xavier-Ventayol
 Codi de tota la part pràctica del TFG
 
-ARXIUS Rdata:
-a) elsa - Base de dades elsa sense missings a les dades
-b) elsad - Mostra aleatòria de 200 dones amb els valors normals
-c) elsah - Mostra aleatòria de 200 homes amb els valors normals
-d) scaledat_d - Mostra de dones escalada i normalitzada per aplicar els mètodes de clustering
-e) scaledat_h - Mostra d'homes escalada i normalitzada per aplicar els mètodes de clustering
-f) totalelsa - Mostra de dones i homes junta (400 observacions). Només s'utilitza per fer dos gràfics de la desccriptiva miltivariant de les dades
+ARXIUS Rdata: Vaig guardar les daeds en arxius Rdata per no haver de crear sempre les mostres amb la mateixa llavor
+1. elsa - Base de dades elsa sense missings a les dades
+2. elsad - Mostra aleatòria de 200 dones amb els valors normals
+3. elsah - Mostra aleatòria de 200 homes amb els valors normals
+4. scaledat_d - Mostra de dones escalada i normalitzada per aplicar els mètodes de clustering
+5. scaledat_h - Mostra d'homes escalada i normalitzada per aplicar els mètodes de clustering
+6. totalelsa - Mostra de dones i homes junta (400 observacions). Només s'utilitza per fer dos gràfics de la desccriptiva miltivariant de les dades
 
-ARXIUS Rmd:
+ARXIUS Rmd: He dividit el codi del TFG ja que el meu ordinador no suportava tot el codi en un sol Rmd
 1. Descriptiva de les dades.
 2. Cada mètode té associat un fitxer Rmd per separat:
   - K-means
