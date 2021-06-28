@@ -1,0 +1,290 @@
+---
+title: "Descriptiva de les dades"
+author: "Xavier Ventayol Farras"
+date: "18/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Llibreries:
+
+```{r}
+libraries <- function(){
+ libr <- c("FactoMineR","car","plyr","cluster","factoextra","dplyr","mclust","ggplot2","ggExtra","NbClust","bestNormalize","gridExtra","ggpubr","ggtext","glue","corrplot","sqldf","tidyverse","ggpubr","rstatix","fastcluster","descr","plotly","kableExtra","pastecs")
+ invisible(lapply(libr, library, character.only=TRUE))
+}
+libraries()
+```
+
+# Càrrega de totes les dades
+
+## Llegim les dades
+
+- Base elsa original sense missings
+
+```{r}
+#load("elsa.rdata")
+#dat <- as.data.frame(dat)
+#class(dat)
+#head(dat)
+```
+
+## Mostra dones
+
+```{r}
+#elsaD <- sqldf(
+#  "select *
+#   from dat
+#   where sex = 'female'
+#  ")
+
+#sum(elsaD$sex == "female") #ha quedat comprovat que s'ha fet correctament
+
+#set.seed(123)
+#elsad <- elsaD[sample(nrow(elsaD), size = 200, replace = FALSE, prob = NULL),]
+#save(elsad, file = "elsad.Rdata")
+load("elsad.Rdata")
+head(elsad)
+```
+
+## Mostra homes
+
+```{r}
+#elsaH <- sqldf(
+#  "select *
+#   from dat
+#   where sex = 'male'
+#  ")
+
+#sum(elsaH$sex == "male") #ha quedat comprovat que s'ha fet correctament
+
+#set.seed(123)
+#elsah <- elsaH[sample(nrow(elsaH), size = 200, replace = FALSE, prob = NULL),]
+#save(elsah, file = "elsah.Rdata")
+load("elsah.Rdata")
+head(elsah)
+```
+
+## Mostra amb 200 homes i 200 dones
+
+```{r}
+## BBDD elsa és la base de dades amb homes i dones, n=400
+#elsa <- rbind(elsad,elsah)
+#View(elsa)
+#save(elsa, file = "totalelsa.rdata")
+load("totalelsa.rdata")
+head(elsa)
+tail(elsa)
+#sum(elsa$sex == "female")
+#sum(elsa$sex == "male")
+```
+
+# Anàlisi de les dades
+
+## Univariant
+
+- T-test homes i dones per veure la diferència entre sexes
+
+```{r}
+#T-Test per corroborar la separació de les bases de dades
+#Variables numèriques
+t.test(elsad$age, elsah$age) #h0
+t.test(elsad$bmi, elsah$bmi) #h0
+t.test(elsad$waist, elsah$waist) #h1
+t.test(elsad$hip, elsah$hip) #h0
+t.test(elsad$grip, elsah$grip) #h1
+t.test(elsad$sbp, elsah$sbp) #h0
+t.test(elsad$dbp, elsah$dbp) #h0
+t.test(elsad$glucose, elsah$glucose) #h1
+t.test(elsad$triglycerides, elsah$triglycerides) #h0
+t.test(elsad$hdl_chol, elsah$hdl_chol) #h1
+t.test(elsad$ldl_chol, elsah$ldl_chol) #h1
+t.test(elsad$total_chol, elsah$total_chol) #h1
+t.test(elsad$crp, elsah$crp) #h0
+t.test(elsad$healthstatus, elsah$healthstatus) #h0
+```
+
+- Chi-quadrat entre homes i dones per veure la diferència entre sexes
+
+```{r}
+#Variables categòriques
+#utilitzant la base de dones i homes junt
+chisq.test(table(elsa$marital_status,elsa$sex)) #h1
+table(elsa$marital_status,elsa$sex)
+chisq.test(table(elsa$education,elsa$sex)) #h1
+table(elsa$education,elsa$sex)
+chisq.test(table(elsa$wealth,elsa$sex)) #h1
+table(elsa$wealth,elsa$sex)
+chisq.test(table(elsa$loneliness,elsa$sex)) #h0
+chisq.test(table(elsa$level_pa,elsa$sex)) #h1
+table(elsa$level_pa,elsa$sex)
+chisq.test(table(elsa$ah,elsa$sex)) #h0
+chisq.test(table(elsa$depression,elsa$sex)) #h1
+table(elsa$depression,elsa$sex)
+chisq.test(table(elsa$srh,elsa$sex)) #h0
+```
+
+### Dones
+
+- Normalitat de les dades
+
+```{r}
+num_var <-c("age","bmi","waist","hip","grip","sbp","dbp","glucose","triglycerides","hdl_chol","ldl_chol","total_chol","crp","healthstatus")
+##Agafem nomes la mostra amb les variables numèriques
+elsadN <- elsad[,num_var]
+#Mirem la normalitat de totes les variables que formen els clústers
+shapiro.test(elsadN$bmi)    #T
+shapiro.test(elsadN$waist)  #N!!
+shapiro.test(elsadN$hip)    #T
+shapiro.test(elsadN$grip)   #T
+shapiro.test(elsadN$sbp)    #N!!
+shapiro.test(elsadN$dbp)    #N!!
+shapiro.test(elsadN$glucose)      #T
+shapiro.test(elsadN$triglycerides)#T
+shapiro.test(elsadN$hdl_chol)     #T 
+shapiro.test(elsadN$ldl_chol)     #N!!
+shapiro.test(elsadN$total_chol)   #T
+shapiro.test(elsadN$crp)          #T
+shapiro.test(elsadN$healthstatus) #T
+shapiro.test(elsadN$age)
+```
+
+- Freqüències de les variables categòriques
+
+```{r}
+#summary(elsadN)
+elsadC <- elsad[,c(1:9)]
+#freq(elsadC$sex, plot = FALSE)
+freq(elsadC$marital_status , plot = FALSE)
+freq(elsadC$education , plot = FALSE)
+freq(elsadC$wealth , plot = FALSE)
+freq(elsadC$loneliness , plot = FALSE)
+freq(elsadC$level_pa , plot = FALSE)
+freq(elsadC$ah , plot = FALSE)
+freq(elsadC$depression , plot = FALSE)
+freq(elsadC$srh , plot = FALSE)
+```
+
+- Estadístics descriptius
+
+```{r}
+valors <- c("range","mean","std.dev")
+for(i in 1:length(num_var)){
+is2 <- round(stat.desc(elsad[,num_var[i]])[valors],5)
+print(is2)
+}
+#Rang de les dones:
+for(i in 1:length(num_var)){
+  rang <- round(range(elsad[,num_var[i]]),5)
+  print(rang)
+}
+```
+
+
+### Homes
+
+- Normalitat de les dades
+
+```{r}
+##Agafem nomes la mostra amb les variables numèriques
+elsahN <- elsah[,num_var]
+#Mirem la normalitat de totes les variables que formen els clústers
+shapiro.test(elsahN$bmi)    #T
+shapiro.test(elsahN$waist)  #N!!
+shapiro.test(elsahN$hip)    #N!!
+shapiro.test(elsahN$grip)   #N!!
+shapiro.test(elsahN$sbp)    #T
+shapiro.test(elsahN$dbp)    #N!!
+shapiro.test(elsahN$glucose)      #T
+shapiro.test(elsahN$triglycerides)#T
+shapiro.test(elsahN$hdl_chol)     #T 
+shapiro.test(elsahN$ldl_chol)     #N pràcticament
+shapiro.test(elsahN$total_chol)   #N!!
+shapiro.test(elsahN$crp)          #T
+shapiro.test(elsahN$healthstatus) #T
+shapiro.test(elsahN$age) 
+```
+
+- Freqüències de les variables categòriques
+
+```{r}
+#summary(elsahN)
+elsahC <- elsah[,c(1:9)]
+freq(elsahC$sex, plot = FALSE)
+freq(elsahC$marital_status , plot = FALSE)
+freq(elsahC$education , plot = FALSE)
+freq(elsahC$wealth , plot = FALSE)
+freq(elsahC$loneliness , plot = FALSE)
+freq(elsahC$level_pa , plot = FALSE)
+freq(elsahC$ah , plot = FALSE)
+freq(elsahC$depression , plot = FALSE)
+freq(elsahC$srh , plot = FALSE)
+```
+
+- Estadístics descriptius
+
+```{r}
+valors <- c("range","mean","std.dev")
+for(i in 1:length(num_var)){
+is2 <- round(stat.desc(elsah[,num_var[i]])[valors],5)
+print(is2)
+}
+#Rang dels homes
+#Rang de les dones:
+for(i in 1:length(num_var)){
+  rang <- round(range(elsah[,num_var[i]]),5)
+  print(rang)
+}
+```
+
+
+## bivariant
+
+- Variables categòriques, estratifiquem per sexe
+
+```{r}
+# Amb la base de dades de dones i homes
+# Balloon plots
+df_freq <- sqldf(
+  "select level_pa, depression, sex, count(*) as Freq
+  from elsa
+  group by level_pa, depression, sex"
+)
+
+ballon1 <- ggballoonplot(df_freq, x = "level_pa", y = "depression", size = "Freq",
+              fill = "Freq", facet.by = "sex",
+              ggtheme = theme_bw()) +
+              scale_fill_viridis_c(option = "C")
+
+
+df_freq2 <- sqldf(
+  "select wealth, education, sex, count(*) as Freq
+  from elsa
+  group by wealth, education, sex"
+)
+
+ballon2 <- ggballoonplot(df_freq2, x = "education", y = "wealth", size = "Freq",
+              fill = "Freq", facet.by = "sex",
+              ggtheme = theme_bw()) +
+              scale_fill_viridis_c(option = "C")
+
+
+ballon1
+ballon2
+```
+
+- Variables numèriqes
+
+```{r}
+Mh <- cor(elsah[,num_var], method = "spearman")
+Md <- cor(elsad[,num_var], method = "spearman")
+
+par(mfrow=c(1,2))
+corrplot(Md, type="upper")
+corrplot(Mh, type="upper")
+```
+
+

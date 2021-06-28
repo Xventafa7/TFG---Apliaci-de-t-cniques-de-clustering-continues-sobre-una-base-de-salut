@@ -1,0 +1,66 @@
+---
+title: "ARI"
+author: "Xavier Ventayol Farras"
+date: "18/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Llibreries:
+
+```{r}
+libraries <- function(){
+ libr <- c("FactoMineR","car","plyr","cluster","factoextra","dplyr","mclust","ggplot2","ggExtra","NbClust","bestNormalize","gridExtra","ggpubr","ggtext","glue","corrplot","sqldf","tidyverse","ggpubr","rstatix","fastcluster","descr","plotly","kableExtra","pastecs")
+ invisible(lapply(libr, library, character.only=TRUE))
+}
+libraries()
+```
+
+
+- Necessari aplicar el codi una veagada executats tots els mètodes i tenint les variables indicadores dels clústers a la memòria de l'R
+
+# Comparació clustering (ARI)
+
+
+### Dones
+
+- Cal redactar al treball, mètode ja aplicat
+
+```{r}
+#K-means vs Jeràrquic
+adjustedRandIndex(ind.km3d, var.ind.hc) #0.9560539
+#K-means vs K-medoids
+adjustedRandIndex(ind.km3d, var.ind.kmedd) #0.4990502
+#K-means vs GMMs
+adjustedRandIndex(ind.km3d, var.ind.ggmd) #0.2792555
+#Jerarquic vs K-medoids
+adjustedRandIndex(var.ind.hc, var.ind.kmedd) #0.4766655
+#Jeràrquic vs GMMs
+adjustedRandIndex(var.ind.hc, var.ind.ggmd) #0.2645771
+#K-medoids vs GMMs
+adjustedRandIndex(var.ind.kmedd, var.ind.ggmd) #0.1810125
+```
+
+
+### Homes
+
+- cal redactar al treball, mètode ja aplicat
+
+```{r}
+#K-means vs Jeràrquic
+adjustedRandIndex(ind.km3h, var.ind.hch) #0.9250948
+#K-means vs K-medoids
+adjustedRandIndex(ind.km3h, var.ind.kmedh) #0.4789046
+#K-means vs GMMs
+adjustedRandIndex(ind.km3h, var.ind.ggmh) #0.03465681
+#Jerarquic vs K-medoids
+adjustedRandIndex(var.ind.hch, var.ind.kmedh) #0.4850988
+#Jeràrquic vs GMMs
+adjustedRandIndex(var.ind.hch, var.ind.ggmh) #0.04047615
+#K-medoids vs GMMs
+adjustedRandIndex(var.ind.kmedh, var.ind.ggmh) #0.02059086
+```
+

@@ -1,0 +1,1499 @@
+---
+title: "K-means"
+author: "Xavier Ventayol Farras"
+date: "18/6/2021"
+output: html_document
+---
+
+Llibreries:
+
+```{r}
+libraries <- function(){
+ libr <- c("FactoMineR","car","plyr","cluster","factoextra","dplyr","mclust","ggplot2","ggExtra","NbClust","bestNormalize","gridExtra","ggpubr","ggtext","glue","corrplot","sqldf","tidyverse","ggpubr","rstatix","fastcluster","descr","plotly","kableExtra","pastecs")
+ invisible(lapply(libr, library, character.only=TRUE))
+}
+libraries()
+```
+
+
+# Selecció de les mostres per homes i dones
+
+## Llegim les dades
+
+- Base de dades elsa complet sense missings 
+
+```{r}
+#load("elsa.rdata")
+#dat <- as.data.frame(dat)
+#class(dat)
+#head(dat)
+```
+
+## Mostra dones
+
+```{r}
+#elsaD <- sqldf(
+#  "select *
+#   from dat
+#   where sex = 'female'
+#  ")
+
+#sum(elsaD$sex == "female") #ha quedat comprovat que s'ha fet correctament
+
+#set.seed(123)
+#elsad <- elsaD[sample(nrow(elsaD), size = 200, replace = FALSE, prob = NULL),]
+#save(elsad, file = "elsad.Rdata")
+load("elsad.Rdata")
+head(elsad)
+```
+
+## Mostra homes
+
+```{r}
+#elsaH <- sqldf(
+#  "select *
+#   from dat
+#   where sex = 'male'
+#  ")
+
+#sum(elsaH$sex == "male") #ha quedat comprovat que s'ha fet correctament
+
+#set.seed(123)
+#elsah <- elsaH[sample(nrow(elsaH), size = 200, replace = FALSE, prob = NULL),]
+#save(elsah, file = "elsah.Rdata")
+load("elsah.Rdata")
+head(elsah)
+```
+
+
+# Preparació de les mostres per aplicar el clustering
+
+## Normalització i escalat de les dades
+
+### Dones
+
+Normalització de les dades
+
+```{r}
+#bmi_n <- bestNormalize(elsadN$bmi, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(bmi_n$x.t) #N
+
+#hip_n <- bestNormalize(elsadN$hip, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(hip_n$x.t) #N
+
+#grip_n <- bestNormalize(elsadN$grip, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(grip_n$x.t) #No normalitzat
+
+#glucose_n <- bestNormalize(elsadN$glucose, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(glucose_n$x.t) #No noramlitzat
+
+#triglycerides_n <- bestNormalize(elsadN$triglycerides, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(triglycerides_n$x.t) #No normalitzat per poc
+
+#hdl_chol_n <- bestNormalize(elsadN$hdl_chol, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(hdl_chol_n$x.t) #no normalitzat
+
+#total_chol_n <- bestNormalize(elsadN$total_chol, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(total_chol_n$x.t) #Normalitzat
+
+#crp_n <- bestNormalize(elsadN$crp, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(crp_n$x.t) #Normalitzat
+
+#healthstatus_n <- bestNormalize(elsadN$healthstatus, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(healthstatus_n$x.t) #No normalitzat per poc
+```
+
+Agafem les variables normalitzades i les escalem per aplicar els clústers
+
+```{r}
+#elsad_cl <- elsadN[,-14]
+#names(elsad_cl)
+#elsad_cl$bmi <- bmi_n$x.t
+#elsad_cl$hip <- hip_n$x.t
+#elsad_cl$grip <- grip_n$x.t
+#elsad_cl$glucose <- glucose_n$x.t
+#elsad_cl$triglycerides <- triglycerides_n$x.t
+#elsad_cl$hdl_chol <- hdl_chol_n$x.t
+#elsad_cl$total_chol <- total_chol_n$x.t
+#elsad_cl$crp <- crp_n$x.t
+#elsad_cl$healthstatus <- healthstatus_n$x.t
+```
+
+Una vegada totes les variables normalitzades el màxim possible, escalem la base de dades per poder fer els mètodes de clustering.
+
+Ja s'ha creat la base de dades de variables continues i normalitzades elsad_cls
+
+```{r}
+#Escalem/estandaritzem les dades per poder crear els clústers
+#elsad_cls <- as.data.frame(scale(elsad_cl))
+load("scaledat_d.rdata")
+head(elsad_cls)
+#Es guarda la base de dades escalada i normalitzada
+#save(elsad_cls, file = "scaledat_d.rdata")
+```
+
+### Homes
+
+Normalització de les dades
+
+```{r}
+#bmi_n <- bestNormalize(elsahN$bmi, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(bmi_n$x.t) #No normalitzat per poc
+
+#dbp_n <- bestNormalize(elsahN$dbp, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(dbp_n$x.t) #No normalitzat per poc
+
+#glucose_n <- bestNormalize(elsahN$glucose, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(glucose_n$x.t) #No noramlitzat per poc
+
+#triglycerides_n <- bestNormalize(elsahN$triglycerides, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(triglycerides_n$x.t) #Normalitzat
+
+#hdl_chol_n <- bestNormalize(elsahN$hdl_chol, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(hdl_chol_n$x.t) #no normalitzat per poc
+
+#crp_n <- bestNormalize(elsahN$crp, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(crp_n$x.t) #No normalitzat per poc
+
+#healthstatus_n <- bestNormalize(elsahN$healthstatus, allow_orderNorm = FALSE, out_of_sample = FALSE)
+#shapiro.test(healthstatus_n$x.t) #No normalitzat per poc
+```
+
+Agafem les variables normalitzades i les escalem per aplicar els clústers
+
+```{r}
+#elsah_cl <- elsahN[,-14]
+#names(elsah_cl)
+#elsah_cl$bmi <- bmi_n$x.t
+#elsah_cl$dbp <- hip_n$x.t
+#elsah_cl$glucose <- glucose_n$x.t
+#elsah_cl$triglycerides <- triglycerides_n$x.t
+#elsah_cl$hdl_chol <- hdl_chol_n$x.t
+#elsah_cl$crp <- crp_n$x.t
+#elsah_cl$healthstatus <- healthstatus_n$x.t
+```
+
+Una vegada totes les variables normalitzades el màxim possible, escalem la base de dades per poder fer els mètodes de clustering.
+
+Ja s'ha creat la base de dades de variables continues i normalitzades elsah_cls
+
+```{r}
+#Escalem/estandaritzem les dades per poder crear els clústers
+#elsah_cls <- as.data.frame(scale(elsah_cl))
+load("scaledat_h.rdata")
+head(elsah_cls)
+#Es guarda la base de dades escalada i normalitzada
+#save(elsah_cls, file = "scaledat_h.rdata")
+```
+
+## Comprovació de l'existència de clústers
+
+### Dones
+
+LA BBDD SÍ QUE ÉS CLUSTERITZABLES
+
+```{r}
+Hopkins_d <- get_clust_tendency(elsad_cls, n = nrow(elsad_cls)-1, graph = TRUE)
+Hopkins_d$hopkins_stat 
+```
+
+### Homes
+
+LA BBDD SÍ QUE ÉS CLUSTERITZABLES
+
+```{r}
+Hopkins_h <- get_clust_tendency(elsah_cls, n = nrow(elsah_cls)-1, graph = TRUE)
+Hopkins_h$hopkins_stat 
+```
+
+
+# K-means
+
+### Dones
+
+Decidir el nombre de clústrs òptims
+
+```{r}
+el <- fviz_nbclust(elsad_cls, kmeans, method = "wss") #elbow
+sil <- fviz_nbclust(elsad_cls, kmeans, method = "silhouette")
+gap <- fviz_nbclust(elsad_cls, kmeans, method = "gap_stat")
+
+#Nbclust per corroborar el nombre de clústers
+nb <- NbClust(elsad_cls, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans", index = "alllong")
+nbg <- fviz_nbclust(nb)
+grid.arrange(el, sil, gap, nbg, nrow = 2)
+```
+
+Es dubta entre 2 i 3. S'escull 3 per causes de contextualització i per intentar trobar el màxim de gurps diferenciats. Tot i això fem el gràfic de les dues particions.
+
+```{r}
+#Apliquem el k-means per les 2 opcions
+set.seed(123)
+elsad.km2 <- kmeans(elsad_cls, 2, nstart = 25)
+set.seed(123)
+elsad.km3 <- kmeans(elsad_cls, 3, nstart = 25)
+
+(kmd2 <- fviz_cluster(elsad.km2, data = elsad_cls, ellipse.type = "convex", palette = "jco",repel = FALSE, gtheme = theme_minimal()))
+(kmd3 <- fviz_cluster(elsad.km3, data = elsad_cls, ellipse.type = "convex", palette = "jco",repel = FALSE, gtheme = theme_minimal()))
+#grid.arrange(kmd2, kmd3, nrow = 1)
+```
+
+### Profiling Dones
+
+```{r}
+#Agafem la variable identificadora dels clústers i fem el profiling del k-means
+ind.km3d <- as.factor(elsad.km3$cluster)
+elsad_km <- cbind(elsad, cluster = ind.km3d)
+head(elsad_km)
+```
+
+- Mida dels clústers, mitjana i mediana de les variables numèriques en funció dels clústers 
+
+A la pràctica només ens fixem en la mitjana
+
+```{r}
+#Mida dels clústers
+elsad.km3$size
+#Mitjana i mediana
+#BBDD auxiliar amb només les variables numèriques
+elsad_km_n <- elsad_km[,c(10:23)]
+aggregate(elsad_km_n, by = list(cluster = ind.km3d), mean)
+#aggregate(elsad_km_n, by = list(cluster = ind.km3d), median)
+```
+
+#### Kruskal-wallis/ANOVA
+
+Fem els test de kruskall wallys/ANOVA per veure si hi ha diferències entre clústers
+
+a) age
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(age)
+#No hi ha outliers extrems 
+
+#normalitat per clústers <- Tots els clústers són no normals
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(age)
+#Homoscedasticitat a través del Levene test
+leveneTest(age ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- Kruskal-Wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(age ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+#pwc <- elsad_km %>% 
+#  dunn_test(age ~ cluster, p.adjust.method = "bonferroni") 
+#pwc
+```
+
+b) bmi
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(bmi)
+#Cap outlier és extrem
+
+#normalitat per clústers <- el tercer clúster no és normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(bmi)
+#Homoscedasticitat a través del Levene test
+leveneTest(bmi ~ cluster, data = elsad_km) #No hi ha homoscedasticitat
+```
+
+- Kruskal-Wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(bmi ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(bmi ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+c) waist
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(waist)
+#No hi ha outliers extrems 
+
+#normalitat per clústers <- Tots els clústers són normals
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(waist)
+#Homoscedasticitat a través del Levene test
+leveneTest(waist ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(waist ~ cluster, elsad_km)
+summary(ANOVA1)
+#Tukey test
+TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+pairwise.t.test(elsad_km$waist, elsad_km$cluster, p.adj = "bonferroni") 
+```
+
+d) hip
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(hip)
+#Dels otliers del clúster 1 i 3 cap és extrem
+
+#normalitat per clústers <- el tercer clúster no és normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(hip)
+#Homoscedasticitat a través del Levene test
+leveneTest(hip ~ cluster, data = elsad_km) #No hi ha homoscedasticitat
+```
+
+- Kruskal-Wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(hip ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(hip ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+e) grip
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(grip)
+#Els tres aoutliers són extrems, estan al clúster 2
+
+#normalitat per clústers <- clúster 2 no normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(grip)
+#Homoscedasticitat a través del Levene test
+leveneTest(grip ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- Kruskal-Wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(grip ~ cluster)
+res.kruskal
+
+#pwc <- elsad_km %>% 
+#  dunn_test(grip ~ cluster, p.adjust.method = "bonferroni") 
+#pwc
+```
+
+f) sbp
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(sbp)
+#Cap outlier és extrem
+
+#normalitat per clústers <- El clúster 2 no és normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(sbp)
+#Homoscedasticitat a través del Levene test
+leveneTest(sbp ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- Kruskal-Wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(sbp ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(sbp ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+g) dbp
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(dbp)
+#No hi ha otliers
+
+#normalitat per clústers <- els 3 grups són normals
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(dbp)
+#Tots són normals
+
+#Homoscedasticitat a través del Levene test
+leveneTest(dbp ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(dbp ~ cluster, elsad_km)
+summary(ANOVA1)
+#Tukey test
+TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+pairwise.t.test(elsad_km$dbp, elsad_km$cluster, p.adj = "bonferroni")
+```
+
+h) glucose
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(glucose)
+#Menys 1 tots els outliers són no extrems
+
+#normalitat per clústers <- Cap clúster és normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(glucose)
+#homoscedasticitat a través del Levene test
+leveneTest(glucose ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(glucose ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(glucose ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+i) triglycerides
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(triglycerides)
+#Cap outlier és extrem
+
+#normalitat per clústers <- Cap clúster és normals
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(triglycerides)
+#homoscedasticitat a través del Levene test
+leveneTest(triglycerides ~ cluster, data = elsad_km) # no hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(triglycerides ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(triglycerides ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+j) hdl_chol
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(hdl_chol)
+#Cap outlier és extrem
+
+#normalitat per clústers <- el clúster 3 no és normal pero casi
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(hdl_chol)
+#homoscedasticitat a través del Levene test
+leveneTest(hdl_chol ~ cluster, data = elsad_km) # no hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(hdl_chol ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(hdl_chol ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+k) ldl_chol
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(ldl_chol)
+#No hi ha outliers
+
+#normalitat per clústers <- Tots són normals
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(ldl_chol)
+#homoscedasticitat a través del Levene test
+leveneTest(ldl_chol ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(ldl_chol ~ cluster, elsad_km)
+summary(ANOVA1)
+#Tukey test
+TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+pairwise.t.test(elsad_km$ldl_chol, elsad_km$cluster, p.adj = "bonferroni")
+```
+
+l) total_chol
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(total_chol)
+#Outlier cluster 1 no extrem
+
+#normalitat per clústers <- el 2n clúster no és normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(total_chol)
+#homoscedasticitat a través del Levene test
+leveneTest(total_chol ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(total_chol ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(total_chol ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+m) crp
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(crp)
+#Hi ha outliers extrems
+
+#normalitat per clústers <- cap clúster normal
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(crp)
+#Cal aplicar kruskal-wallis!
+
+#homoscedasticitat a través del Levene test
+leveneTest(crp ~ cluster, data = elsad_km) #no hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsad_km %>% kruskal_test(crp ~ cluster)
+res.kruskal
+
+pwc <- elsad_km %>% 
+  dunn_test(crp ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+n) healthstatus
+
+```{r}
+#mirem outliers
+elsad_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(healthstatus)
+#No hi ha outliers 
+
+#normalitat per clústers <- Tots els clústers són normals
+elsad_km %>%
+  group_by(cluster) %>%
+  shapiro_test(healthstatus)
+
+#homoscedasticitat a través del Levene test
+leveneTest(healthstatus ~ cluster, data = elsad_km) #hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(healthstatus ~ cluster, elsad_km)
+summary(ANOVA1)
+#Tukey test
+TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+pairwise.t.test(elsad_km$healthstatus, elsad_km$cluster, p.adj = "bonferroni")
+```
+
+#### Chi-square test of independence
+
+Chi-square per veure si hi ha diferències entre clústers
+
+a) marital_status
+```{r}
+ct <- table(elsad_km$marital_status,elsad_km$cluster)
+ct
+chisq.test(ct) 
+```
+
+b) education
+
+```{r}
+ct <- table(elsad_km$education,elsad_km$cluster)
+ct
+chisq.test(ct)
+```
+
+c) wealth
+
+```{r}
+ct <- table(elsad_km$wealth,elsad_km$cluster)
+ct
+chisq.test(ct) 
+```
+
+d) loneliness
+
+```{r}
+ct <- table(elsad_km$loneliness,elsad_km$cluster)
+ct
+chisq.test(ct) 
+
+```
+
+e) level_pa
+
+```{r}
+ct <- table(elsad_km$level_pa,elsad_km$cluster)
+ct
+chisq.test(ct) 
+
+```
+
+f) ah
+
+```{r}
+ct <- table(elsad_km$ah,elsad_km$cluster)
+ct
+chisq.test(ct)
+
+# diferències C1 i C2
+df <- subset(elsad_km, cluster == 1 | cluster == 2)
+df$cluster <- as.factor(as.character(df$cluster))
+ct1 <- table(df$ah,df$cluster)
+ct1
+chisq.test(ct1)
+
+# diferències C1 i C3
+df2 <- subset(elsad_km, cluster == 1 | cluster == 3)
+df2$cluster <- as.factor(as.character(df2$cluster))
+ct2 <- table(df2$ah,df2$cluster)
+ct2
+chisq.test(ct2)
+
+# diferències C2 i C3
+df3 <- subset(elsad_km, cluster == 2 | cluster == 3)
+df3$cluster <- as.factor(as.character(df3$cluster))
+ct3 <- table(df3$ah,df3$cluster)
+ct3
+chisq.test(ct3)
+```
+
+
+g) depression
+
+```{r}
+ct <- table(elsad_km$depression,elsad_km$cluster)
+ct
+chisq.test(ct) 
+```
+
+
+h) srh
+
+```{r}
+ct <- table(elsad_km$srh,elsad_km$cluster)
+ct
+chisq.test(ct) 
+```
+
+#### Boxplots i barcharts
+
+Boxplots i bar charts de totes les variables de la mostra, estratificat per clústers, que han resultat significatives.
+
+- Figura 9.1
+
+```{r}
+x1 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = bmi)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Índex de massa corporal")
+x2 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = glucose)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Glucosa")
+x3 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = crp)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Proteïna PCR")
+x4 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = healthstatus)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Healthstatus")
+
+grid.arrange(x1, x2, x3, x4, nrow = 2, ncol = 2)
+```
+
+- Figura 9.2
+
+```{r}
+x1 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = sbp)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Pressió sistòlica")
+x2 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = dbp)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Pressió diastòlica")
+
+grid.arrange(x1, x2, nrow = 2, ncol = 2)
+```
+
+- Figura 9.3
+
+```{r}
+x1 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = hdl_chol)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Colesterol HDL")
+x2 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = ldl_chol)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Colesterol LDL")
+x3 <- ggplot(elsad_km, aes(group = cluster, x = cluster, y = total_chol)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Colesterol total")
+
+grid.arrange(x1, x2, x3, nrow = 2, ncol = 2)
+```
+
+- Figura 9.4
+
+```{r}
+ggplot(data = elsad_km, aes(x = cluster)) +
+    geom_bar(aes(fill = ah), position = "dodge") +
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Hipertensió arterial")
+```
+
+### Homes
+
+Decidir el nombre de clústrs òptims
+
+```{r}
+el2 <- fviz_nbclust(elsah_cls, kmeans, method = "wss") #elbow
+sil2 <- fviz_nbclust(elsah_cls, kmeans, method = "silhouette")
+gap2 <-fviz_nbclust(elsah_cls, kmeans, method = "gap_stat")
+
+#mirem amb la funció Nbclust per corroborar el nombre de clústers
+nb <- NbClust(elsah_cls, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans", index = "alllong")
+nbh <- fviz_nbclust(nb)
+grid.arrange(el2, sil2, gap2, nbh, nrow=2)
+```
+
+Pel que es veu, es dubta entre 2, 3 i 9 clústers. S'escull 3 per causes de contextualització però fem un gràfic de les 3 possibles particions
+
+```{r}
+#Apliquem el k-means per les 3 opcions
+set.seed(123)
+elsah.km2 <- kmeans(elsah_cls, 2, nstart = 25)
+set.seed(123)
+elsah.km3 <- kmeans(elsah_cls, 3, nstart = 25)
+set.seed(123)
+elsah.km9 <- kmeans(elsah_cls, 9, nstart = 25)
+
+(kmh2 <- fviz_cluster(elsah.km2, data = elsah_cls, ellipse.type = "convex", palette = "jco",repel = FALSE, gtheme = theme_minimal()))
+(kmh3 <- fviz_cluster(elsah.km3, data = elsah_cls, ellipse.type = "convex", palette = "jco",repel = FALSE, gtheme = theme_minimal()))
+(kmh9 <- fviz_cluster(elsah.km9, data = elsah_cls, ellipse.type = "convex", palette = "jco",repel = FALSE, gtheme = theme_minimal()))
+```
+
+Sembla que existeix separació entre els clústers tant amb la partició de 2 com amb la partició de 3, amb la 9 no n'hi ha. 
+
+### Profiling Homes
+
+```{r}
+#Agafem la variable identificadora dels clústers i fem el profiling del k-means
+ind.km3h <- as.factor(elsah.km3$cluster)
+#Ho passem a la base de dades elsa
+elsah_km <- cbind(elsah, cluster = ind.km3h)
+head(elsah_km)
+```
+
+Calculem la mida dels clústers, la mitjana i la mediana de les variables numèriques. 
+
+```{r}
+#Mida dels clústers
+elsah.km3$size 
+#Mitjana i mediana
+#Creem una base de dades auxiliar amb només les variables numèriques
+elsah_km_n <- elsah_km[,c(10:23)]
+aggregate(elsah_km_n, by = list(cluster = ind.km3h), mean)
+#aggregate(elsah_km_n, by = list(cluster = ind.km3h), median) #crp (median c1 = 1, median c3 = 1,25)
+```
+
+Fem els test de kruskall wallys/ANOVA y chi-square per veure si hi ha diferències entre clústers
+
+#### Kruskal-wallis/ANOVA
+
+a) age
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(age)
+#No hi ha outliers extrems 
+
+#normalitat per clústers <- C1 no normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(age)
+
+#homoscedasticitat a través del Levene test
+leveneTest(age ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(age ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(age ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+b) bmi
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(bmi)
+#Cap outlier és extrem
+
+#normalitat per clústers <- el tercer clúster normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(bmi)
+
+#homoscedasticitat a través del Levene test
+leveneTest(bmi ~ cluster, data = elsah_km) #Hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(bmi ~ cluster, elsah_km)
+summary(ANOVA1) #hi ha diferències entre grups
+
+#Anàlisis post-hoc
+#Tukey test
+TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+pairwise.t.test(elsah_km$bmi, elsah_km$cluster, p.adj = "bonferroni") 
+```
+
+c) waist
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(waist)
+#No hi ha outliers extrems 
+
+#normalitat per clústers <- C3 no normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(waist)
+
+#homoscedasticitat a través del Levene test
+leveneTest(waist ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(waist ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(waist ~ cluster, p.adjust.method = "bonferroni") 
+pwc
+```
+
+d) hip
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(hip)
+#Dels otliers del clúster 1 i 3 cap és extrem
+
+#normalitat per clústers <- el tercer clúster no és normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(hip)
+#homoscedasticitat a través del Levene test
+leveneTest(hip ~ cluster, data = elsah_km) #No hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(hip ~ cluster)
+res.kruskal #Hi ha diferències entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(hip ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+e) grip
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(grip)
+#outliers no extrems
+
+#normalitat per clústers <- Tots els clústers normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(grip)
+#homoscedasticitat a través del Levene test
+leveneTest(grip ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(grip ~ cluster, elsah_km)
+summary(ANOVA1) #no hi ha diferències entre grups
+
+#Anàlisis post-hoc
+#Tukey test
+#TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+#pairwise.t.test(elsah_km$grip, elsah_km$cluster, p.adj = "bonferroni") 
+```
+
+f) sbp
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(sbp)
+#1 outlier extrem
+
+#normalitat per clústers <- El clúster 2 i 3 no són normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(sbp)
+
+#homoscedasticitat a través del Levene test
+leveneTest(sbp ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(sbp ~ cluster)
+res.kruskal #no hi ha diferències entre grups
+
+#pwc <- elsah_km %>% 
+#  dunn_test(sbp ~ cluster, p.adjust.method = "bonferroni") 
+#pwc  
+```
+
+g) dbp
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(dbp)
+#No hi ha otliers extrems
+
+#normalitat per clústers <- sembla a ser que els 3 grups són normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(dbp)
+#homoscedasticitat a través del Levene test
+leveneTest(dbp ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- ANOVA
+
+```{r}
+ANOVA1 <- aov(dbp ~ cluster, elsah_km)
+summary(ANOVA1) #no hi ha diferències entre grups
+
+#Anàlisis post-hoc
+#Tukey test
+#TukeyHSD(ANOVA1, "cluster")
+#t.test entre grups
+#pairwise.t.test(elsah_km$dbp, elsah_km$cluster, p.adj = "bonferroni") 
+```
+
+h) glucose
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(glucose)
+#2 outliers extrems
+
+#normalitat per clústers <- Cap clúster clústers són normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(glucose)
+#homoscedasticitat a través del Levene test
+leveneTest(glucose ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(glucose ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(glucose ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+i) triglycerides
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(triglycerides)
+#1 outlier és extrem
+
+#normalitat per clústers <- Cap clústers és normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(triglycerides)
+#homoscedasticitat a través del Levene test
+leveneTest(triglycerides ~ cluster, data = elsah_km) # hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(triglycerides ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(triglycerides ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+j) hdl_chol
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(hdl_chol)
+#Cap outlier és extrem
+
+#normalitat per clústers <- el clúster 1 no és normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(hdl_chol)
+
+#homoscedasticitat a través del Levene test
+leveneTest(hdl_chol ~ cluster, data = elsah_km) # no hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(hdl_chol ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(hdl_chol ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+k) ldl_chol
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(ldl_chol)
+#No hi ha otliers extrems
+
+#normalitat per clústers <- Tots són normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(ldl_chol)
+#homoscedasticitat a través del Levene test
+leveneTest(ldl_chol ~ cluster, data = elsah_km) #no hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(ldl_chol ~ cluster)
+res.kruskal #hi ha diferències significatives entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(ldl_chol ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+l) total_chol
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(total_chol)
+#cap Outlier extrem
+
+#normalitat per clústers <- el 1r clúster no és normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(total_chol)
+#homoscedasticitat a través del Levene test
+leveneTest(total_chol ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(total_chol ~ cluster)
+res.kruskal #Hi ha diferències entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(total_chol ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+`
+
+m) crp
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(crp)
+#hi ha outliers extrems
+
+#normalitat per clústers <- sembla a ser que els 3 grups són no normals
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(crp)
+#homoscedasticitat a través del Levene test
+leveneTest(crp ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(crp ~ cluster)
+res.kruskal #Hi ha diferències entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(crp ~ cluster, p.adjust.method = "bonferroni") 
+pwc 
+```
+
+n) healthstatus
+
+```{r}
+#mirem outliers
+elsah_km %>% 
+  group_by(cluster) %>% 
+  identify_outliers(healthstatus)
+#No hi ha outliers extrems
+
+#normalitat per clústers <- C1 no normal
+elsah_km %>%
+  group_by(cluster) %>%
+  shapiro_test(healthstatus)
+#homoscedasticitat a través del Levene test
+leveneTest(healthstatus ~ cluster, data = elsah_km) #hi ha homoscedasticitat
+```
+
+- kruskal-wallis
+
+```{r}
+res.kruskal <- elsah_km %>% kruskal_test(healthstatus ~ cluster)
+res.kruskal #Hi ha diferències entre grups
+
+pwc <- elsah_km %>% 
+  dunn_test(healthstatus ~ cluster, p.adjust.method = "bonferroni") 
+pwc  
+```
+
+#### Chi-square test of independence
+
+Chi-square per veure si hi ha diferències entre clústers
+
+a) marital_status
+```{r}
+ct <- table(elsah_km$marital_status,elsah_km$cluster)
+ct
+chisq.test(ct) #no hi ha associació entre clusters, variables independents
+```
+
+b) education
+
+```{r}
+ct <- table(elsah_km$education,elsah_km$cluster)
+ct
+chisq.test(ct) #no hi ha associació entre clusters, variables independents
+```
+
+c) wealth
+
+```{r}
+ct <- table(elsah_km$wealth,elsah_km$cluster)
+ct
+chisq.test(ct) #no hi ha associació entre clusters, variables independents
+```
+
+d) loneliness
+
+```{r}
+ct <- table(elsah_km$loneliness,elsah_km$cluster)
+ct
+chisq.test(ct) #no hi ha associació entre clusters, variables independents
+```
+
+e) level_pa
+
+```{r}
+ct <- table(elsah_km$level_pa,elsah_km$cluster)
+ct
+chisq.test(ct) #hi ha associació entre clusters, variables dependents
+
+# diferències C1 i C2
+df <- subset(elsah_km, cluster == 1 | cluster == 2)
+df$cluster <- as.factor(as.character(df$cluster))
+ct1 <- table(df$level_pa,df$cluster)
+ct1
+chisq.test(ct1)
+
+# diferències C1 i C3
+df2 <- subset(elsah_km, cluster == 1 | cluster == 3)
+df2$cluster <- as.factor(as.character(df2$cluster))
+ct2 <- table(df2$level_pa,df2$cluster)
+ct2
+chisq.test(ct2)
+
+# diferències C2 i C3
+df3 <- subset(elsah_km, cluster == 2 | cluster == 3)
+df3$cluster <- as.factor(as.character(df3$cluster))
+ct3 <- table(df3$level_pa,df3$cluster)
+ct3
+chisq.test(ct3)
+```
+
+f) ah
+
+```{r}
+ct <- table(elsah_km$ah,elsah_km$cluster)
+ct
+chisq.test(ct) #no hi ha associació entre clusters, variables independents
+```
+
+
+g) depression
+
+```{r}
+ct <- table(elsah_km$depression,elsah_km$cluster)
+ct
+chisq.test(ct) #no hi ha associació entre clusters, variables independents
+```
+
+
+h) srh
+
+```{r}
+ct <- table(elsah_km$srh,elsah_km$cluster)
+ct
+chisq.test(ct) #hi ha associació entre clusters, variables dependents
+
+# diferències C1 i C2
+df <- subset(elsah_km, cluster == 1 | cluster == 2)
+df$cluster <- as.factor(as.character(df$cluster))
+ct1 <- table(df$srh,df$cluster)
+ct1
+chisq.test(ct1)
+
+# diferències C1 i C3
+df2 <- subset(elsah_km, cluster == 1 | cluster == 3)
+df2$cluster <- as.factor(as.character(df2$cluster))
+ct2 <- table(df2$srh,df2$cluster)
+ct2
+chisq.test(ct2)
+
+# diferències C2 i C3
+df3 <- subset(elsah_km, cluster == 2 | cluster == 3)
+df3$cluster <- as.factor(as.character(df3$cluster))
+ct3 <- table(df3$srh,df3$cluster)
+ct3
+chisq.test(ct3)
+```
+
+#### Boxplots i barcharts
+
+Boxplots i bar charts de totes les variables de la mostra, estratificat per clústers, que han resultat significatives.
+
+- Figura 9.5
+
+```{r}
+x1 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = bmi)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Índex de massa corporal")
+x2 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = waist)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Circumferència cintura")
+x3 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = total_chol)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Colesterol total")
+x4 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = ldl_chol)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Colesterol LDL")
+
+grid.arrange(x1, x2, x4, x3, nrow = 2, ncol = 2)
+```
+
+- Figura 9.6
+
+```{r}
+x1 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = glucose)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Glucosa")
+x2 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = hdl_chol)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Colesterol HDL")
+x3 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = healthstatus)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Healthstatus")
+
+grid.arrange(x1, x2, x3, nrow = 2, ncol = 2)
+```
+
+- Figura 9.7
+
+```{r}
+
+x1 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = triglycerides)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Triglicèrids")
+x2 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = crp)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Proteïna PCR")
+x3 <- ggplot(elsah_km, aes(group = cluster, x = cluster, y = age)) + 
+    geom_boxplot(fill = c("lightblue", "yellow", "grey"), color= "black", outlier.colour = "red", outlier.shape = 1) +
+    stat_summary(fun.y=mean, geom = "point", shape = 15, size = 2)+
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Edat")
+
+grid.arrange(x1, x2, x3, nrow = 2, ncol = 2)
+```
+
+- Figura 9.8
+
+```{r}
+x1 <- ggplot(data = elsah_km, aes(x = cluster)) +
+    geom_bar(aes(fill = level_pa), position = "dodge") +
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Nivell d'activitat física")
+x2 <- ggplot(data = elsah_km, aes(x = cluster)) +
+    geom_bar(aes(fill = srh), position = "dodge") +
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Autoavaluació de salut")
+
+grid.arrange(x1, x2, nrow = 2, ncol = 1)
+```
