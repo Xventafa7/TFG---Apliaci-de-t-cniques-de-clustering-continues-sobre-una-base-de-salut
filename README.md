@@ -1,8 +1,8 @@
 # TFG-CLUTERING-Xavier-Ventayol
 Codi de tota la part pràctica del TFG
 
-ARXIUS Rdata: Vaig guardar les daeds en arxius Rdata per no haver de crear sempre les mostres amb la mateixa llavor
-1. elsa - Base de dades elsa sense missings a les dades
+ARXIUS Rdata: Vaig guardar les dades en arxius Rdata per no haver de crear sempre les mostres amb la mateixa llavor
+1. elsa - Base de dades elsa sense missings en cap observació
 2. elsad - Mostra aleatòria de 200 dones amb els valors normals
 3. elsah - Mostra aleatòria de 200 homes amb els valors normals
 4. scaledat_d - Mostra de dones escalada i normalitzada per aplicar els mètodes de clustering
